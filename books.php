@@ -1,4 +1,6 @@
 <?php
+require_once('Ray_books.php');
+require_once('JettBooks.php');
 require_once('TtnBooks.php');
 
 Class Book
@@ -29,15 +31,29 @@ Class TtnLibrary
         'TtnSwiftBooks' => 'Swift',
         'TtnKotlinBooks' => 'Kotlin',
         'TtnPHPBooks' => 'PHP',
+        'JettSwiftBooks' => 'Swift',
+        'JettKotlinBooks' => 'Kotlin',
+        'JettPHPBooks' => 'PHP',
+        'RaySwift' => 'Swift',
+        'RayKotlin' => 'Kotlin',
+        'RayPHP' => 'PHP',
+    ];
+
+    const IMPORTMETHODMAP = [
+        'BookDatabase' => 'exportBooks',
+        'BookInterface' => 'getBookNames',
+        'Others' => 'getBooks',
     ];
 
     protected $books = [];
 
-    public function importBooks(BookDatabase $bookDatabase)
+    public function importBooks($bookDatabase)
     {
         $type = $this->getCategory($bookDatabase);
 
-        foreach ($bookDatabase->exportBooks() as $bookName) {
+        $importMethod = $this->importAdaptor($bookDatabase);
+
+        foreach ($bookDatabase->$importMethod() as $bookName) {
             $this->books[] = new Book($type, $bookName);
         }
     }
@@ -63,9 +79,22 @@ Class TtnLibrary
         return $result;
     }
 
-    protected function getCategory(BookDatabase $bookDatabase)
+    protected function getCategory($bookDatabase)
     {
         return static::CATEGORY[get_class($bookDatabase)];
+    }
+
+    protected function importAdaptor($bookDatabase)
+    {
+        $interface = 'Others';
+
+        foreach (static::IMPORTMETHODMAP as $k => $v) {
+            if (in_array($k, class_implements($bookDatabase))) {
+                $interface = $k;
+            }
+        }
+
+        return static::IMPORTMETHODMAP[$interface];
     }
 
     protected function searchByName($text)
@@ -103,10 +132,17 @@ Class TtnLibrary
     }
 }
 
+$bookResources = [
+    'TtnSwiftBooks', 'TtnKotlinBooks', 'TtnPHPBooks',
+    'JettSwiftBooks', 'JettSwiftBooks', 'JettPHPBooks',
+    'RaySwift', 'RayKotlin', 'RayPHP',
+];
+
 $library = new TtnLibrary;
-$library->importBooks(new TtnSwiftBooks);
-$library->importBooks(new TtnKotlinBooks);
-$library->importBooks(new TtnPHPBooks);
+
+foreach ($bookResources as $resource) {
+    $library->importBooks(new $resource);
+}
 
 // print_r($library->searchTool('category', 'Swift'));
 // print_r($library->searchTool('category', 'Kotlin'));
